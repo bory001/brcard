@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>폰트 테스트</title>
+</head>
+<body>
+<h3>폰트 로드 테스트</h3>
+<input type="file" id="fontFile" accept=".ttf,.otf,.ttc">
+<br><br>
+<canvas id="c" width="600" height="200" style="border:1px solid #ccc;"></canvas>
+<div id="log" style="font-family:monospace;font-size:12px;margin-top:10px;"></div>
+
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const log = document.getElementById('log');
+
+function addLog(msg) {
+  log.innerHTML += msg + '<br>';
+  console.log(msg);
+}
+
+document.getElementById('fontFile').addEventListener('change', async function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  
+  const fontName = file.name.replace(/\.(ttf|otf|ttc)$/i, '');
+  addLog('파일: ' + file.name);
+  addLog('폰트명: ' + fontName);
+  
+  const buf = await file.arrayBuffer();
+  const base64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
+  
+  // 방법 1: CSS @font-face
+  const style = document.createElement('style');
+  style.textContent = `@font-face { font-family: "${fontName}"; src: url("data:font/truetype;base64,${base64}"); }`;
+  document.head.appendChild(style);
+  addLog('CSS @font-face 주입 완료');
+  
+  // 방법 2: FontFace API
+  const face = new FontFace(fontName, buf);
+  try {
+    const loaded = await face.load();
+    document.fonts.add(loaded);
+    addLog('FontFace API 등록 완료');
+  } catch(e) {
+    addLog('FontFace 실패: ' + e.message);
+  }
+  
+  // 방법 3: div 렌더링으로 캐시 활성화
+  const div = document.createElement('div');
+  div.style.cssText = `font-family:"${fontName}";position:absolute;left:-9999px;font-size:20px;`;
+  div.textContent = '가나다ABC';
+  document.body.appendChild(div);
+  div.getBoundingClientRect();
+  
+  // 100ms 후 체크
+  await new Promise(r => setTimeout(r, 100));
+  
+  addLog('fonts.check: ' + document.fonts.check(`16px "${fontName}"`));
+  addLog('fonts.status: ' + [...document.fonts].find(f=>f.family===fontName)?.status);
+  
+  document.body.removeChild(div);
+  
+  // 캔버스에 그리기
+  ctx.clearRect(0, 0, 600, 200);
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, 600, 200);
+  
+  // 기본 폰트로 비교
+  ctx.fillStyle = '#999';
+  ctx.font = '24px sans-serif';
+  ctx.fillText('기본폰트: 가나다 ABC 123', 10, 40);
+  
+  // 서버 폰트
+  ctx.fillStyle = '#000';
+  ctx.font = `24px "${fontName}"`;
+  ctx.fillText(`${fontName}: 가나다 ABC 123`, 10, 80);
+  
+  // 크기 변경 테스트
+  ctx.font = `36px "${fontName}"`;
+  ctx.fillText(`크기36: 가나다`, 10, 130);
+  
+  ctx.font = `48px "${fontName}"`;
+  ctx.fillText(`크기48: 가나다`, 10, 185);
+  
+  addLog('캔버스 렌더링 완료 - 위 캔버스 확인하세요');
+});
+</script>
+</body>
+</html>
