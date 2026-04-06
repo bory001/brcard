@@ -322,9 +322,7 @@ header h1{font-size:13px;font-weight:700;flex:1;}
         <div class="tb-sep"></div>
         <button class="tb-btn" onclick="registerTemplate()">📋서식등록</button>
         <div class="tb-sep"></div>
-        <span class="tb-lbl">배경:</span>
-        <button class="tb-btn" onclick="document.getElementById('bgImgInput').click()">🖼배경이미지</button>
-        <button class="tb-btn" onclick="clearBg()">배경제거</button>
+        <button class="tb-btn" onclick="setSelectedAsBg()">🖼배경지정</button>
         <div class="tb-sep"></div>
         <select id="qbFont" style="height:26px;padding:2px 4px;border:1px solid var(--border);border-radius:6px;font-size:10.5px;font-family:inherit;background:var(--surface);outline:none;max-width:110px;">
           <optgroup label="── 웹 폰트 ──">
@@ -1123,6 +1121,19 @@ window.setBgImage=inp=>{
     const i=new Image();i.onload=()=>{state.bgImage=i;draw();};i.src=url;
   });
   inp.value='';
+};
+
+// 선택된 이미지 객체를 배경으로 지정 (캔버스 꽉 차게, 이동 불가)
+window.setSelectedAsBg=()=>{
+  const o=state.selected;
+  if(!o){showToast('이미지를 먼저 선택하세요','err');return;}
+  if(o.type!=='image'){showToast('이미지 객체만 배경으로 지정할 수 있습니다','err');return;}
+  // 선택 객체를 배경으로 승격 → objects에서 제거
+  state.bgImage=o.img;
+  state.objects=state.objects.filter(x=>x!==o);
+  state.selected=null;state.selectedList=[];
+  draw();updateSelectionPanel();
+  showToast('배경 지정 완료 — 캔버스 꽉 차게 고정됨','ok');
 };
 
 // ══════════════════════ 텍스트 ══════════════════════
