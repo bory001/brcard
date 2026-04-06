@@ -46,12 +46,12 @@ header h1{font-size:13px;font-weight:700;flex:1;}
 
 /* 캔버스 */
 .canvas-wrap{background:#555;display:flex;flex-direction:column;align-items:center;padding:10px;gap:8px;flex:1;overflow:hidden;min-height:0;}
-.canvas-toolbar{background:var(--surface);border-radius:10px;padding:7px 10px;display:flex;gap:5px;align-items:center;flex-wrap:wrap;width:100%;max-width:660px;box-shadow:0 1px 4px rgba(0,0,0,.12);}
-.tb-btn{background:none;border:1px solid var(--border);border-radius:7px;padding:6px 9px;font-size:11px;cursor:pointer;font-family:inherit;color:var(--text);white-space:nowrap;}
+.canvas-toolbar{background:var(--surface);border-radius:10px;padding:5px 8px;display:flex;gap:3px;align-items:center;flex-wrap:wrap;width:100%;max-width:700px;box-shadow:0 1px 4px rgba(0,0,0,.12);}
+.tb-btn{background:none;border:1px solid var(--border);border-radius:6px;padding:4px 7px;font-size:10.5px;cursor:pointer;font-family:inherit;color:var(--text);white-space:nowrap;}
 .tb-btn.active{background:var(--primary);color:#fff;border-color:var(--primary);}
 .tb-btn.tb-btn-del{background:#e74c3c;color:#fff;border-color:#c0392b;}
 .tb-btn:active{opacity:.7;}
-.tb-sep{width:1px;height:20px;background:var(--border);flex-shrink:0;}
+.tb-sep{width:1px;height:18px;background:var(--border);flex-shrink:0;margin:0 1px;}
 .tb-color{width:30px;height:30px;border:1px solid var(--border);border-radius:7px;cursor:pointer;padding:2px;}
 .tb-lbl{font-size:10px;color:var(--muted);}
 #cardCanvas{display:block;box-shadow:0 4px 20px rgba(0,0,0,.5);touch-action:none;outline:none;}
@@ -169,6 +169,21 @@ header h1{font-size:13px;font-weight:700;flex:1;}
 .pw-err{color:#ff6b6b;font-size:13px;text-align:center;min-height:18px;font-weight:500;
   animation:shake .3s ease;}
 @keyframes shake{0%,100%{transform:translateX(0);}25%{transform:translateX(-6px);}75%{transform:translateX(6px);};}
+/* 로딩 오버레이 */
+#pwLoadingBox{
+  display:none;flex-direction:column;align-items:center;justify-content:center;gap:18px;
+}
+#pwLoadingBox.show{display:flex;}
+.pw-spinner{
+  width:48px;height:48px;border:4px solid rgba(255,255,255,.2);
+  border-top-color:#3498db;border-radius:50%;
+  animation:spin .8s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg);}}
+.pw-loading-msg{color:#fff;font-size:15px;font-weight:600;letter-spacing:.5px;text-align:center;line-height:1.7;}
+.pw-loading-sub{color:rgba(255,255,255,.5);font-size:11px;text-align:center;}
+.pw-done-icon{font-size:48px;animation:popIn .3s ease;}
+@keyframes popIn{0%{transform:scale(.5);opacity:0;}100%{transform:scale(1);opacity:1;}}
 
 /* ══ 관리자 비밀번호 변경 모달 ══ */
 #adminPwModal{
@@ -243,6 +258,12 @@ header h1{font-size:13px;font-weight:700;flex:1;}
     <button class="pw-btn" onclick="onPwConfirm()">🔓 로그인</button>
     <div class="pw-err" id="pwErr"></div>
   </div>
+  <!-- 로딩 박스 (로그인 후 표시) -->
+  <div id="pwLoadingBox">
+    <div class="pw-spinner" id="pwSpinner"></div>
+    <div class="pw-loading-msg" id="pwLoadingMsg">프로그램 로딩중...</div>
+    <div class="pw-loading-sub" id="pwLoadingSub">서식 및 폰트를 불러오는 중입니다</div>
+  </div>
   <div style="position:absolute;bottom:14px;right:18px;color:rgba(255,255,255,.35);font-size:10px;letter-spacing:.3px;">Made by 보령시 전산팀</div>
 </div>
 
@@ -287,28 +308,18 @@ header h1{font-size:13px;font-weight:700;flex:1;}
   <div class="tab-panel active" id="panelCanvas">
     <div class="canvas-wrap" id="canvasWrap">
       <div class="canvas-toolbar">
-        <span class="tb-lbl">도구:</span>
         <button class="tb-btn" id="toolText" onclick="setTool('text')">T텍스트</button>
         <button class="tb-btn" onclick="document.getElementById('imgFileInput').click()">🖼이미지</button>
         <input type="file" id="imgFileInput" accept="image/*" multiple style="display:none" onchange="addImagesFromFile(this)">
+        <button class="tb-btn" id="btnMultiSel" onclick="toggleMultiSelectMode()">☑다중선택</button>
         <button class="tb-btn tb-btn-del" id="tbDelBtn" onclick="headerDeleteSelected()" style="display:none;">🗑삭제</button>
         <div class="tb-sep"></div>
         <button class="tb-btn" id="btnLandscape" onclick="setOrientation('landscape')">가로</button>
         <button class="tb-btn" id="btnPortrait" onclick="setOrientation('portrait')">세로</button>
         <div class="tb-sep"></div>
-        <span class="tb-lbl">배경:</span>
-        <input type="color" class="tb-color" id="bgColor" value="#ffffff" oninput="setBgColor(this.value)">
-        <button class="tb-btn" onclick="document.getElementById('bgImgInput').click()">배경이미지</button>
-        <input type="file" id="bgImgInput" accept="image/*" style="display:none" onchange="setBgImage(this)">
-        <button class="tb-btn" onclick="clearBg()">배경제거</button>
-        <div class="tb-sep"></div>
         <button class="tb-btn" onclick="registerTemplate()">📋서식등록</button>
-      </div>
-      <div class="multisel-bar" id="multiSelBar">👆 객체 길게누르면 멀티선택 모드</div>
-      <!-- 모바일 퀵 컨트롤 바: 객체 선택 시 표시 -->
-      <div class="quick-bar" id="quickBar">
-        <span class="qb-lbl">폰트</span>
-        <select id="qbFont">
+        <div class="tb-sep"></div>
+        <select id="qbFont" style="height:26px;padding:2px 4px;border:1px solid var(--border);border-radius:6px;font-size:10.5px;font-family:inherit;background:var(--surface);outline:none;max-width:110px;">
           <optgroup label="── 웹 폰트 ──">
             <option value="Noto Sans KR">Noto Sans KR</option>
             <option value="Noto Serif KR">Noto Serif KR</option>
@@ -323,8 +334,7 @@ header h1{font-size:13px;font-weight:700;flex:1;}
           </optgroup>
           <optgroup label="── 서버 폰트 ──" id="qbServerFontGroup"></optgroup>
         </select>
-        <span class="qb-lbl">크기</span>
-        <select id="qbSize">
+        <select id="qbSize" style="height:26px;width:46px;padding:2px 2px;border:1px solid var(--border);border-radius:6px;font-size:10.5px;font-family:inherit;background:var(--surface);outline:none;">
           <option value="8">8</option><option value="9">9</option><option value="10">10</option>
           <option value="11">11</option><option value="12">12</option><option value="14">14</option>
           <option value="16">16</option><option value="18">18</option><option value="20">20</option>
@@ -332,7 +342,7 @@ header h1{font-size:13px;font-weight:700;flex:1;}
           <option value="36">36</option><option value="42">42</option><option value="48">48</option>
           <option value="56">56</option><option value="64">64</option><option value="72">72</option>
         </select>
-        <input type="color" id="qbColor" value="#000000" title="색상">
+        <input type="color" id="qbColor" value="#000000" title="글자색상" style="width:26px;height:26px;border:1px solid var(--border);border-radius:6px;cursor:pointer;padding:1px;flex-shrink:0;">
       </div>
       <canvas id="cardCanvas" width="600" height="350" tabindex="0"></canvas>
     </div>
@@ -471,6 +481,9 @@ header h1{font-size:13px;font-weight:700;flex:1;}
 
 <div class="drop-ov" id="dropOv">☁ 여기에 놓으면 서버에 자동 저장<br><small>이미지 / 폰트(.ttf,.otf) / 서식(.json)</small></div>
 <div class="toast" id="toast"></div>
+<!-- 배경 기능 hidden 보존 (JS 참조용) -->
+<input type="color" id="bgColor" value="#ffffff" style="display:none">
+<input type="file" id="bgImgInput" accept="image/*" style="display:none" onchange="setBgImage(this)">
 
 <!-- ══ 비밀번호 시스템 (일반 스크립트 — module 스코프 밖) ══ -->
 <script>
@@ -531,15 +544,16 @@ header h1{font-size:13px;font-weight:700;flex:1;}
   };
 
   function unlockSite(isAdmin){
-    document.getElementById('pwOverlay').classList.add('hidden');
+    // pw-box 숨기고 로딩 박스 표시
+    var box=document.querySelector('.pw-box');
+    var lb=document.getElementById('pwLoadingBox');
+    if(box) box.style.display='none';
+    if(lb)  lb.classList.add('show');
     if(isAdmin){
       var btn=document.getElementById('adminBtn');
       if(btn) btn.style.display='';
-      showToastSafe('👑 관리자 로그인','ok');
-      window.openAdminModal && window.openAdminModal();
-    } else {
-      showToastSafe('✅ 접속 완료','ok');
     }
+    window._pendingAdmin = isAdmin;
     // module 스크립트의 loadFromServer 호출 (준비될 때까지 대기)
     waitAndLoad();
   }
@@ -663,6 +677,7 @@ async function loadFromServer(){
   document.getElementById('syncDot').className='sync-dot';
   try{
     // 서식 — 키만 먼저 가져온 뒤 각 노드 개별 로드
+    updateLoadingMsg('서식 불러오는 중...');
     serverTemplates=[];
     const tmplKeys=await getChildKeys('card_templates');
     for(const key of tmplKeys){
@@ -692,14 +707,100 @@ async function loadFromServer(){
     renderFontSelect();
     renderFontList();
 
+    // 최신 서식 자동 불러오기 (캔버스가 비어있을 때만)
+    if(serverTemplates.length>0 && state.objects.length===0 && !state.bgImage){
+      updateLoadingMsg('최신 서식 불러오는 중...');
+      await autoLoadLatestTemplate(serverTemplates[0]);
+    }
+
+    // 로딩 완료 표시
+    finishLoading();
+
   }catch(e){
     document.getElementById('syncDot').className='sync-dot off';
     showToast('서버 연결 실패: '+e.message,'err');
+    finishLoading(true);
+  }
+}
+
+function updateLoadingMsg(msg){
+  const el=document.getElementById('pwLoadingMsg');
+  if(el) el.textContent=msg;
+}
+
+function finishLoading(isError){
+  const lb=document.getElementById('pwLoadingBox');
+  const spinner=document.getElementById('pwSpinner');
+  const msg=document.getElementById('pwLoadingMsg');
+  const sub=document.getElementById('pwLoadingSub');
+  if(!lb) return;
+
+  // 스피너 → 완료 아이콘
+  if(spinner) spinner.style.display='none';
+  const icon=document.createElement('div');
+  icon.className='pw-done-icon';
+  icon.textContent=isError?'⚠️':'✅';
+  lb.insertBefore(icon, lb.firstChild);
+
+  if(msg) msg.textContent=isError?'연결 실패':'로딩 완료';
+  if(sub) sub.textContent=isError?'서버에 연결할 수 없습니다':'잠시 후 시작합니다';
+
+  // 1초 후 오버레이 완전히 닫기
+  setTimeout(()=>{
+    const overlay=document.getElementById('pwOverlay');
+    if(overlay) overlay.classList.add('hidden');
+    // 관리자이면 설정 모달 오픈
+    if(window._pendingAdmin){
+      window._pendingAdmin=false;
+      window.openAdminModal && window.openAdminModal();
+    }
+  }, 1000);
+}
+
+// 최신 서식 자동 적용 (confirm 없이)
+async function autoLoadLatestTemplate(tmpl){
+  try{
+    state.bgColor=tmpl.bgColor||'#ffffff';
+    document.getElementById('bgColor').value=state.bgColor;
+    state.isLandscape=tmpl.isLandscape!==false;
+    state.width=tmpl.width||600;
+    state.height=tmpl.height||350;
+    canvas.width=state.width;canvas.height=state.height;
+    document.getElementById('btnLandscape').classList.toggle('active',state.isLandscape);
+    document.getElementById('btnPortrait').classList.toggle('active',!state.isLandscape);
+    state.bgImage=null;
+    if(tmpl.bgImageDataUrl){
+      const img=new Image();
+      await new Promise(r=>{img.onload=r;img.onerror=r;img.src=tmpl.bgImageDataUrl;});
+      state.bgImage=img;
+    }
+    let objList=[];
+    if(tmpl.objectsJson){try{objList=JSON.parse(tmpl.objectsJson);}catch(e){objList=[];}}
+    else{const raw=tmpl.objects;objList=Array.isArray(raw)?raw:(raw&&typeof raw==='object'?Object.values(raw):[]);}
+    state.objects=[];
+    for(const o of objList){
+      if(!o||!o.type)continue;
+      if(o.type==='text'){state.objects.push({...o});}
+      else if(o.type==='image'&&o.dataUrl){
+        const img=new Image();
+        await new Promise(r=>{img.onload=r;img.onerror=r;img.src=o.dataUrl;});
+        state.objects.push({...o,img});
+      }
+    }
+    state.selected=null;state.selectedList=[];state.multiSelectMode=false;
+    updateMultiSelBar();
+    setTimeout(()=>{fitCanvas();draw();},50);
+    showToast(`최신 서식 "${tmpl.name}" 불러옴`,'ok');
+  }catch(e){
+    console.warn('자동 서식 로드 실패:',e);
   }
 }
 
 async function loadFontsFromServer(){
-  for(const f of serverFonts){
+  if(serverFonts.length>0) updateLoadingMsg(`폰트 로딩중... (0/${serverFonts.length})`);
+  for(let i=0;i<serverFonts.length;i++){
+    const f=serverFonts[i];
+    updateLoadingMsg(`폰트 로딩중... (${i+1}/${serverFonts.length})`);
     await registerFont(f.name, f.base64);
   }
   await document.fonts.ready;
@@ -750,6 +851,8 @@ async function registerFont(name, base64){
 
 // ══════════════════════ 초기화 ══════════════════════
 window._loadFromServer = loadFromServer;
+window.updateLoadingMsg = updateLoadingMsg;
+window.finishLoading = finishLoading;
 window.onload=async()=>{
   // 비밀번호 입력창 포커스
   setTimeout(()=>{ const p=document.getElementById('pwInput'); if(p) p.focus(); },100);
@@ -782,7 +885,8 @@ const PANELS=['panelCanvas','panelEdit','panelAssets','panelSave','panelFont'];
 window.switchTab=i=>{
   PANELS.forEach((p,j)=>{
     document.getElementById(p).classList.toggle('active',j===i);
-    document.getElementById('tab'+j).classList.toggle('active',j===i);
+    const tb=document.getElementById('tab'+j);
+    if(tb)tb.classList.toggle('active',j===i);
   });
 };
 
@@ -790,6 +894,17 @@ window.switchTab=i=>{
 window.setTool=t=>{
   state.tool=t;
   document.getElementById('toolText').classList.toggle('active',t==='text');
+};
+window.toggleMultiSelectMode=()=>{
+  state.multiSelectMode=!state.multiSelectMode;
+  const btn=document.getElementById('btnMultiSel');
+  if(btn)btn.classList.toggle('active',state.multiSelectMode);
+  if(btn)btn.textContent=state.multiSelectMode?'✅다중선택':'☑다중선택';
+  if(!state.multiSelectMode){
+    // 모드 해제 시 단일 선택으로 복귀
+    state.selected=state.selectedList.length?state.selectedList[state.selectedList.length-1]:null;
+  }
+  draw();updateSelectionPanel();
 };
 window.setOrientation=o=>{
   state.isLandscape=o==='landscape';
@@ -859,7 +974,6 @@ function setupEditPanelEvents(){
 
 // ══════════════════════ 모바일 퀵 컨트롤 바 ══════════════════════
 function setupQuickBar(){
-  // 퀵바는 모바일에서만 작동
   const qbFont =document.getElementById('qbFont');
   const qbSize =document.getElementById('qbSize');
   const qbColor=document.getElementById('qbColor');
@@ -892,7 +1006,6 @@ window.qbToggle=(type)=>{}; // 스타일 버튼 제거됨 (미사용)
 
 // 퀵바 표시/숨김 + 값 동기화
 function updateQuickBar(){
-  if(window.innerWidth>768)return; // PC는 무시
   // 선택된 텍스트 객체가 있으면 퀵바 값 동기화
   const o=state.selected&&state.selected.type==='text'?state.selected
     :state.selectedList.find(x=>x&&x.type==='text');
@@ -1013,10 +1126,23 @@ function onDown(e){
   // Ctrl 누른 상태면 drag 시작 안 함 — click 이벤트에서 처리
   if(isCtrl) return;
 
-  // 모바일 멀티선택 모드: 탭으로 추가/해제
+  // 다중선택 모드: 탭으로 추가/해제하되 드래그도 가능
   if(state.multiSelectMode){
     const hit=hitTest(x,y);
-    if(hit){toggleMultiSelect(hit);draw();updateSelectionPanel();}
+    if(hit){
+      // 이미 선택된 객체면 드래그 시작 (선택 해제 안 함)
+      if(state.selectedList.includes(hit)){
+        state.selected=hit;
+        drag.active=true;drag.resizing=false;
+        drag.startX=x;drag.startY=y;
+        drag.origX=hit.x;drag.origY=hit.y;
+        drag.multiOrigPositions=state.selectedList.map(o=>({obj:o,x:o.x,y:o.y}));
+      } else {
+        // 새 객체 탭 → 선택 추가
+        toggleMultiSelect(hit);
+        draw();updateSelectionPanel();
+      }
+    }
     return;
   }
 
@@ -1065,17 +1191,10 @@ canvas.addEventListener('click',e=>{
   draw();updateSelectionPanel();
 });
 
-// 멀티선택 모드 배너 업데이트
+// 멀티선택 모드 배너 (bar 제거됨 — 버튼 상태만 업데이트)
 function updateMultiSelBar(){
-  const bar=document.getElementById('multiSelBar');
-  if(!bar)return;
-  if(state.multiSelectMode){
-    bar.classList.add('on');
-    bar.textContent='👆 멀티선택 모드 — 탭으로 추가선택 | 길게누르면 해제';
-  }else{
-    bar.classList.remove('on');
-    bar.textContent='👆 객체 길게누르면 멀티선택 모드';
-  }
+  const btn=document.getElementById('btnMultiSel');
+  if(btn)btn.classList.toggle('active',state.multiSelectMode);
 }
 
 // 멀티선택 토글 헬퍼
@@ -1134,46 +1253,7 @@ canvas.addEventListener('touchstart',onDown,{passive:false});
 canvas.addEventListener('touchmove',onMove,{passive:false});
 canvas.addEventListener('touchend',onUp);
 
-// ── 모바일 길게누르기: 멀티선택 모드 진입/해제 ──
-(()=>{
-  let longTimer=null,longMoved=false,longStartX=0,longStartY=0;
-  canvas.addEventListener('touchstart',e=>{
-    longMoved=false;
-    longStartX=e.touches[0].clientX;
-    longStartY=e.touches[0].clientY;
-    longTimer=setTimeout(()=>{
-      if(longMoved)return;
-      const{x,y}=getPos(e);
-      const hit=hitTest(x,y);
-      if(navigator.vibrate)navigator.vibrate(50);
-      if(state.multiSelectMode){
-        // 이미 멀티선택 모드 → 모드 해제
-        state.multiSelectMode=false;
-        state.selected=state.selectedList.length?state.selectedList[state.selectedList.length-1]:null;
-        updateMultiSelBar();
-        draw();updateSelectionPanel();
-      }else{
-        // 멀티선택 모드 진입
-        state.multiSelectMode=true;
-        state.selectedList=state.selected?[state.selected]:[];
-        if(hit&&!state.selectedList.includes(hit)){
-          state.selectedList.push(hit);state.selected=hit;
-        }else if(hit){state.selected=hit;}
-        updateMultiSelBar();
-        draw();updateSelectionPanel();
-      }
-    },500);
-  },{passive:true});
-  canvas.addEventListener('touchmove',e=>{
-    const dx=e.touches[0].clientX-longStartX;
-    const dy=e.touches[0].clientY-longStartY;
-    if(Math.abs(dx)>8||Math.abs(dy)>8)longMoved=true;
-    if(longMoved&&longTimer){clearTimeout(longTimer);longTimer=null;}
-  },{passive:true});
-  canvas.addEventListener('touchend',()=>{
-    if(longTimer){clearTimeout(longTimer);longTimer=null;}
-  },{passive:true});
-})();
+
 
 
 canvas.addEventListener('dblclick',e=>{
