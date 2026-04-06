@@ -49,8 +49,8 @@ header h1{font-size:13px;font-weight:700;flex:1;}
 .canvas-toolbar{background:var(--surface);border-radius:10px;padding:4px 8px;display:flex;flex-direction:column;gap:3px;width:100%;max-width:700px;box-shadow:0 1px 4px rgba(0,0,0,.12);}
 .tb-row{display:flex;flex-wrap:nowrap;gap:3px;align-items:center;}
 .tb-row-font{width:100%;}
-.tb-font-sel{flex:1;min-width:0;height:26px;padding:2px 3px;border:1px solid var(--border);border-radius:6px;font-size:10.5px;font-family:inherit;background:var(--surface);outline:none;}
-.tb-size-sel{width:48px;flex-shrink:0;height:26px;padding:2px 2px;border:1px solid var(--border);border-radius:6px;font-size:10.5px;font-family:inherit;background:var(--surface);outline:none;}
+.tb-font-sel{width:80px;flex-shrink:1;min-width:0;height:26px;padding:2px 3px;border:1px solid var(--border);border-radius:6px;font-size:10.5px;font-family:inherit;background:var(--surface);outline:none;}
+.tb-size-sel{width:46px;flex-shrink:0;height:26px;padding:2px 2px;border:1px solid var(--border);border-radius:6px;font-size:10.5px;font-family:inherit;background:var(--surface);outline:none;}
 .tb-btn{background:none;border:1px solid var(--border);border-radius:6px;padding:4px 7px;font-size:10.5px;cursor:pointer;font-family:inherit;color:var(--text);white-space:nowrap;}
 .tb-btn.active{background:var(--primary);color:#fff;border-color:var(--primary);}
 .tb-btn.tb-btn-del{background:#e74c3c;color:#fff;border-color:#c0392b;}
@@ -315,23 +315,22 @@ header h1{font-size:13px;font-weight:700;flex:1;}
   <div class="tab-panel active" id="panelCanvas">
     <div class="canvas-wrap" id="canvasWrap">
       <div class="canvas-toolbar">
-        <!-- 1행: 도구 버튼 -->
+        <!-- 1행: 핵심 도구 -->
         <div class="tb-row">
           <button class="tb-btn" id="toolText" onclick="setTool('text')">T글자</button>
           <button class="tb-btn" onclick="document.getElementById('imgFileInput').click()">🖼사진</button>
           <input type="file" id="imgFileInput" accept="image/*" multiple style="display:none" onchange="addImagesFromFile(this)">
-          <button class="tb-btn" id="btnMultiSel" onclick="toggleMultiSelectMode()">☑다중</button>
+          <button class="tb-btn" id="btnMultiSel" onclick="toggleMultiSelectMode()">☑다중선택</button>
           <button class="tb-btn tb-btn-del" id="tbDelBtn" onclick="headerDeleteSelected()" style="display:none;">🗑삭제</button>
           <div class="tb-sep"></div>
           <button class="tb-btn" id="btnLandscape" onclick="setOrientation('landscape')">가로</button>
           <button class="tb-btn" id="btnPortrait" onclick="setOrientation('portrait')">세로</button>
-          <div class="tb-sep"></div>
-          <button class="tb-btn" onclick="setSelectedAsBg()">🖼배경</button>
-          <button class="tb-btn" onclick="registerTemplate()">📋서식</button>
         </div>
-        <!-- 2행: 폰트 컨트롤 (꽉 채움) -->
+        <!-- 2행: 배경/서식 + 폰트 컨트롤 -->
         <div class="tb-row tb-row-font">
-          <span class="tb-lbl" style="flex-shrink:0;">폰트</span>
+          <button class="tb-btn" onclick="setSelectedAsBg()" style="flex-shrink:0;">🖼배경지정</button>
+          <button class="tb-btn" onclick="registerTemplate()" style="flex-shrink:0;">📋서식등록</button>
+          <div class="tb-sep" style="flex-shrink:0;"></div>
           <select id="qbFont" class="tb-font-sel">
             <optgroup label="── 웹 폰트 ──">
               <option value="Noto Sans KR">Noto Sans KR</option>
@@ -347,7 +346,6 @@ header h1{font-size:13px;font-weight:700;flex:1;}
             </optgroup>
             <optgroup label="── 서버 폰트 ──" id="qbServerFontGroup"></optgroup>
           </select>
-          <span class="tb-lbl" style="flex-shrink:0;">크기</span>
           <select id="qbSize" class="tb-size-sel">
             <option value="8">8</option><option value="9">9</option><option value="10">10</option>
             <option value="11">11</option><option value="12">12</option><option value="14">14</option>
@@ -356,8 +354,7 @@ header h1{font-size:13px;font-weight:700;flex:1;}
             <option value="36">36</option><option value="42">42</option><option value="48">48</option>
             <option value="56">56</option><option value="64">64</option><option value="72">72</option>
           </select>
-          <span class="tb-lbl" style="flex-shrink:0;">색상</span>
-          <input type="color" id="qbColor" value="#000000" title="글자색상" style="width:30px;height:26px;border:1px solid var(--border);border-radius:6px;cursor:pointer;padding:1px;flex-shrink:0;">
+          <input type="color" id="qbColor" value="#000000" title="색상" style="width:26px;height:26px;border:1px solid var(--border);border-radius:6px;cursor:pointer;padding:1px;flex-shrink:0;">
         </div>
       </div>
       <canvas id="cardCanvas" width="600" height="350" tabindex="0"></canvas>
