@@ -322,6 +322,10 @@ header h1{font-size:13px;font-weight:700;flex:1;}
         <div class="tb-sep"></div>
         <button class="tb-btn" onclick="registerTemplate()">📋서식등록</button>
         <div class="tb-sep"></div>
+        <span class="tb-lbl">배경:</span>
+        <button class="tb-btn" onclick="document.getElementById('bgImgInput').click()">🖼배경이미지</button>
+        <button class="tb-btn" onclick="clearBg()">배경제거</button>
+        <div class="tb-sep"></div>
         <select id="qbFont" style="height:26px;padding:2px 4px;border:1px solid var(--border);border-radius:6px;font-size:10.5px;font-family:inherit;background:var(--surface);outline:none;max-width:110px;">
           <optgroup label="── 웹 폰트 ──">
             <option value="Noto Sans KR">Noto Sans KR</option>
@@ -1748,9 +1752,15 @@ window.downloadPNG=()=>{
   const dateStr=makeDateStr();
   const serial=makeSerial(personName.trim());
   const filename=`${dateStr}${personName.trim()}${serial}`;
-  const sel=state.selected;state.selected=null;draw();
+  // 선택 핸들이 캡처되지 않도록 선택 상태 임시 해제
+  const prevSel=state.selected;
+  const prevList=[...state.selectedList];
+  state.selected=null;state.selectedList=[];
+  draw();
   const a=document.createElement('a');a.download=`${filename}.png`;a.href=canvas.toDataURL('image/png');a.click();
-  state.selected=sel;draw();showToast(`"${filename}.png" 출력완료!`,'ok');
+  // 선택 상태 복원
+  state.selected=prevSel;state.selectedList=prevList;
+  draw();showToast(`"${filename}.png" 출력완료!`,'ok');
 };
 
 // ══════════════════════ 서식 ══════════════════════
