@@ -575,18 +575,25 @@ header h1{font-size:13px;font-weight:700;flex:1;}
   window.onPwConfirm = function(){ checkPw(); };
 
   function unlockSite(isAdmin){
-    // pw-box 숨기고 로딩 박스 표시
-    var box=document.getElementById('pwBox');
-    var lb=document.getElementById('pwLoadingBox');
-    if(box) box.style.display='none';
-    if(lb)  lb.classList.add('show');
+    var btn=document.getElementById('adminBtn');
     if(isAdmin){
-      var btn=document.getElementById('adminBtn');
+      // 관리자: 로딩 없이 바로 오버레이 닫고 비번설정 모달 즉시 오픈
       if(btn) btn.style.display='';
+      var overlay=document.getElementById('pwOverlay');
+      if(overlay) overlay.classList.add('hidden');
+      window.openAdminModal && window.openAdminModal();
+      // 백그라운드에서 서버 데이터 로드
+      window._pendingAdmin = false;
+      waitAndLoad();
+    } else {
+      // 일반 사용자: 로딩 스피너 표시 후 데이터 로드
+      var box=document.getElementById('pwBox');
+      var lb=document.getElementById('pwLoadingBox');
+      if(box) box.style.display='none';
+      if(lb)  lb.classList.add('show');
+      window._pendingAdmin = false;
+      waitAndLoad();
     }
-    window._pendingAdmin = isAdmin;
-    // module 스크립트의 loadFromServer 호출 (준비될 때까지 대기)
-    waitAndLoad();
   }
 
   function waitAndLoad(){
@@ -772,16 +779,12 @@ function finishLoading(isError){
   if(msg) msg.textContent=isError?'연결 실패':'로딩 완료';
   if(sub) sub.textContent=isError?'서버에 연결할 수 없습니다':'잠시 후 시작합니다';
 
-  // 1초 후 오버레이 완전히 닫기
+  // 1초 후 오버레이 닫기
   setTimeout(()=>{
     const overlay=document.getElementById('pwOverlay');
     if(overlay) overlay.classList.add('hidden');
-    // 관리자이면 설정 모달 오픈
-    if(window._pendingAdmin){
-      window._pendingAdmin=false;
-      window.openAdminModal && window.openAdminModal();
-    }
   }, 1000);
+
 }
 
 // 최신 서식 자동 적용 (confirm 없이)
