@@ -892,22 +892,60 @@ async function autoLoadLatestTemplate(tmpl){
   }
 }
 
-// ── 폰트 캐시 유틸 ──
-const FONT_CACHE_PREFIX = 'br_font_cache_';
-function getFontCache(name){
-  try{ return JSON.parse(localStorage.getItem(FONT_CACHE_PREFIX+name)||'null'); }
-  catch(e){ return null; }
+// ── 폰트 캐시 유틸 (IndexedDB — 용량 제한 없음) ──
+const FONT_DB_NAME    = 'br_font_cache';
+const FONT_DB_VERSION = 1;
+const FONT_STORE      = 'fonts';
+let _fontIDB = null;
+
+function openFontDB(){
+  if(_fontIDB) return Promise.resolve(_fontIDB);
+  return new Promise((res,rej)=>{
+    const req = indexedDB.open(FONT_DB_NAME, FONT_DB_VERSION);
+    req.onupgradeneeded = e => {
+      const db = e.target.result;
+      if(!db.objectStoreNames.contains(FONT_STORE)){
+        db.createObjectStore(FONT_STORE, {keyPath:'name'});
+      }
+    };
+    req.onsuccess  = e => { _fontIDB = e.target.result; res(_fontIDB); };
+    req.onerror    = e => rej(e.target.error);
+  });
 }
-function setFontCache(name, base64, createdAt){
+
+async function getFontCache(name){
   try{
-    localStorage.setItem(FONT_CACHE_PREFIX+name, JSON.stringify({base64, createdAt}));
-  }catch(e){
-    // localStorage 용량 초과 시 조용히 무시
-    console.warn('폰트 캐시 저장 실패 (용량 초과?):', name);
-  }
+    const db = await openFontDB();
+    return await new Promise((res,rej)=>{
+      const tx  = db.transaction(FONT_STORE,'readonly');
+      const req = tx.objectStore(FONT_STORE).get(name);
+      req.onsuccess = e => res(e.target.result || null);
+      req.onerror   = e => res(null);
+    });
+  }catch(e){ return null; }
 }
-function delFontCache(name){
-  localStorage.removeItem(FONT_CACHE_PREFIX+name);
+
+async function setFontCache(name, base64, createdAt){
+  try{
+    const db = await openFontDB();
+    await new Promise((res,rej)=>{
+      const tx  = db.transaction(FONT_STORE,'readwrite');
+      const req = tx.objectStore(FONT_STORE).put({name, base64, createdAt});
+      req.onsuccess = () => res();
+      req.onerror   = e => { console.warn('폰트 캐시 저장 실패:',e.target.error); res(); };
+    });
+  }catch(e){ console.warn('IndexedDB 오류:',e); }
+}
+
+async function delFontCache(name){
+  try{
+    const db = await openFontDB();
+    await new Promise((res)=>{
+      const tx  = db.transaction(FONT_STORE,'readwrite');
+      tx.objectStore(FONT_STORE).delete(name);
+      tx.oncomplete = res;
+    });
+  }catch(e){}
 }
 
 async function loadFontsFromServer(){
@@ -917,7 +955,7 @@ async function loadFontsFromServer(){
     updateLoadingMsg(`폰트 로딩중... (${i+1}/${serverFonts.length})`);
 
     // 캐시 확인: createdAt 동일하면 캐시 사용 → base64 DB 요청 완전 생략
-    const cache = getFontCache(f.name);
+    const cache = await getFontCache(f.name);
     const cacheHit = cache && String(cache.createdAt) === String(f.createdAt) && cache.base64;
     if(cacheHit){
       updateLoadingMsg(`폰트 로딩중... (${i+1}/${serverFonts.length}) ⚡캐시`);
@@ -929,7 +967,7 @@ async function loadFontsFromServer(){
       const base64 = full ? full.base64 : null;
       if(base64){
         await registerFont(f.name, base64);
-        setFontCache(f.name, base64, f.createdAt);
+        await setFontCache(f.name, base64, f.createdAt);
         f.base64 = base64; // serverFonts 업데이트
       }
     }
@@ -2030,7 +2068,7 @@ window.deleteServerFont=async(fbKey,name)=>{
   if(!confirm(`폰트 "${name}"을 서버에서 삭제할까요?`))return;
   await remove(ref(db,`card_fonts/${fbKey}`));
   serverFonts=serverFonts.filter(f=>f.fbKey!==fbKey);
-  delFontCache(name); // 로컬 캐시도 삭제
+  await delFontCache(name); // 캐시도 삭제
   renderFontSelect();renderFontList();
   showToast(`"${name}" 삭제완료`,'ok');
 };
