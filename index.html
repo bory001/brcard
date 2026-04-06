@@ -131,87 +131,74 @@ header h1{font-size:13px;font-weight:700;flex:1;}
   .fsel option,.fsel optgroup{font-size:13px;}
 }
 
-/* ══ 비밀번호 오버레이 ══ */
+/* ══ 비밀번호 잠금 화면 (붙임 스타일) ══ */
 #pwOverlay{
-  position:fixed;inset:0;background:linear-gradient(135deg,#1a2433 0%,#2c3e50 60%,#1a3a4a 100%);
+  position:fixed;inset:0;background:#0a0a0f;
   display:flex;align-items:center;justify-content:center;z-index:9999;
-  flex-direction:column;gap:0;
+  flex-direction:column;
 }
 #pwOverlay.hidden{display:none;}
-.pw-box{
-  background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);
-  border-radius:20px;padding:36px 32px 32px;width:90%;max-width:360px;
-  backdrop-filter:blur(12px);box-shadow:0 20px 60px rgba(0,0,0,.5);
-  display:flex;flex-direction:column;gap:16px;align-items:center;
-}
-.pw-title{color:#fff;font-size:18px;font-weight:700;text-align:center;letter-spacing:.5px;}
-.pw-sub{color:rgba(255,255,255,.55);font-size:12px;text-align:center;margin-top:-8px;}
-.pw-input-wrap{width:100%;position:relative;}
-.pw-input{
-  width:100%;padding:14px 44px 14px 16px;border:1.5px solid rgba(255,255,255,.2);
-  border-radius:12px;font-size:20px;letter-spacing:6px;text-align:center;
-  background:rgba(255,255,255,.1);color:#fff;font-family:inherit;outline:none;
-  transition:border-color .2s;
-}
-.pw-input::placeholder{letter-spacing:2px;font-size:14px;color:rgba(255,255,255,.35);}
-.pw-input:focus{border-color:var(--accent);}
-.pw-eye{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;
-  border:none;color:rgba(255,255,255,.5);cursor:pointer;font-size:18px;padding:4px;}
-.pw-dots{display:flex;gap:10px;justify-content:center;margin-top:-4px;}
-.pw-dot{width:10px;height:10px;border-radius:50%;background:rgba(255,255,255,.2);transition:background .15s;}
-.pw-dot.filled{background:#3498db;}
-.pw-btn{
-  width:100%;padding:14px;background:var(--accent);border:none;border-radius:12px;
-  color:#fff;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;
-  transition:opacity .2s,transform .1s;letter-spacing:.5px;
-}
-.pw-btn:active{opacity:.8;transform:scale(.98);}
-.pw-err{color:#ff6b6b;font-size:13px;text-align:center;min-height:18px;font-weight:500;
-  animation:shake .3s ease;}
-@keyframes shake{0%,100%{transform:translateX(0);}25%{transform:translateX(-6px);}75%{transform:translateX(6px);};}
-/* 로딩 오버레이 */
-#pwLoadingBox{
-  display:none;flex-direction:column;align-items:center;justify-content:center;gap:18px;
-}
+.pw-box{display:flex;flex-direction:column;align-items:center;}
+.pw-lock-logo{width:80px;height:80px;margin-bottom:14px;border-radius:20px;
+  box-shadow:0 4px 24px rgba(52,152,219,.3);object-fit:contain;}
+.pw-title{font-size:1.4rem;font-weight:900;color:#3498db;letter-spacing:2px;margin-bottom:4px;}
+.pw-sub{font-size:0.72rem;color:#5a5a72;font-weight:700;margin-bottom:26px;letter-spacing:1px;}
+.pw-dots{display:flex;gap:14px;margin-bottom:22px;}
+.pw-dot{width:16px;height:16px;border-radius:50%;border:2px solid #2a2a3a;background:transparent;transition:all .2s;}
+.pw-dot.filled{background:#3498db;border-color:#3498db;box-shadow:0 0 8px rgba(52,152,219,.5);}
+.pw-dot.error{background:#e74c3c;border-color:#e74c3c;}
+.pw-err{font-size:0.72rem;font-weight:700;min-height:18px;margin-bottom:16px;
+  letter-spacing:1px;color:#e74c3c;text-align:center;}
+.pw-keypad{display:grid;grid-template-columns:repeat(3,72px);gap:10px;}
+.kbtn{height:72px;border-radius:16px;background:#18181f;border:1px solid #252530;
+  color:#f0f0f5;font-family:inherit;font-size:1.4rem;font-weight:900;
+  cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;
+  -webkit-tap-highlight-color:transparent;user-select:none;}
+.kbtn:active{background:#252535;transform:scale(.93);}
+.kbtn.del{font-size:1.1rem;color:#5a5a72;}
+.kbtn.empty{visibility:hidden;}
+@keyframes shake{0%,100%{transform:translateX(0);}25%{transform:translateX(-8px);}75%{transform:translateX(8px);};}
+/* 로딩 박스 */
+#pwLoadingBox{display:none;flex-direction:column;align-items:center;gap:20px;}
 #pwLoadingBox.show{display:flex;}
-.pw-spinner{
-  width:48px;height:48px;border:4px solid rgba(255,255,255,.2);
-  border-top-color:#3498db;border-radius:50%;
-  animation:spin .8s linear infinite;
-}
+.pw-spinner{width:52px;height:52px;border:4px solid #1a1a2a;
+  border-top-color:#3498db;border-radius:50%;animation:spin .8s linear infinite;}
 @keyframes spin{to{transform:rotate(360deg);}}
-.pw-loading-msg{color:#fff;font-size:15px;font-weight:600;letter-spacing:.5px;text-align:center;line-height:1.7;}
-.pw-loading-sub{color:rgba(255,255,255,.5);font-size:11px;text-align:center;}
-.pw-done-icon{font-size:48px;animation:popIn .3s ease;}
+.pw-loading-msg{color:#f0f0f5;font-size:1rem;font-weight:700;letter-spacing:1px;text-align:center;}
+.pw-loading-sub{color:#5a5a72;font-size:0.72rem;font-weight:700;text-align:center;letter-spacing:1px;}
+.pw-done-icon{font-size:56px;animation:popIn .3s ease;}
 @keyframes popIn{0%{transform:scale(.5);opacity:0;}100%{transform:scale(1);opacity:1;}}
 
-/* ══ 관리자 비밀번호 변경 모달 ══ */
+/* ══ 관리자 비밀번호 변경 (붙임 스타일 오버레이) ══ */
 #adminPwModal{
-  position:fixed;inset:0;background:rgba(0,0,0,.65);display:flex;align-items:center;
-  justify-content:center;z-index:9998;backdrop-filter:blur(4px);
+  position:fixed;inset:0;background:#0a0a0f;
+  display:flex;align-items:center;justify-content:center;z-index:9998;
+  flex-direction:column;
 }
 #adminPwModal.hidden{display:none;}
-.adm-box{
-  background:var(--surface);border-radius:16px;padding:28px 24px 24px;width:90%;max-width:380px;
-  box-shadow:0 16px 48px rgba(0,0,0,.3);display:flex;flex-direction:column;gap:14px;
-}
-.adm-title{font-size:16px;font-weight:700;color:var(--primary);display:flex;align-items:center;gap:8px;}
-.adm-row{display:flex;flex-direction:column;gap:5px;}
-.adm-lbl{font-size:12px;color:var(--muted);font-weight:500;}
+.adm-box{display:flex;flex-direction:column;align-items:center;width:260px;}
+.adm-title{font-size:1.4rem;font-weight:900;color:#3498db;letter-spacing:2px;margin-bottom:4px;}
+.adm-sub{font-size:0.72rem;color:#5a5a72;font-weight:700;margin-bottom:24px;letter-spacing:1px;}
+.adm-row{display:flex;flex-direction:column;gap:5px;width:100%;margin-bottom:10px;}
+.adm-lbl{font-size:0.68rem;color:#5a5a72;font-weight:700;letter-spacing:1px;padding-left:2px;}
 .adm-input{
-  padding:11px 14px;border:1.5px solid var(--border);border-radius:10px;
-  font-size:15px;font-family:inherit;outline:none;transition:border-color .2s;
+  width:100%;background:#18181f;border:1px solid #252530;
+  color:#f0f0f5;font-family:inherit;font-size:1rem;font-weight:700;
+  padding:11px 14px;border-radius:10px;outline:none;
+  text-align:center;letter-spacing:3px;
 }
-.adm-input:focus{border-color:var(--accent);}
-.adm-btns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px;}
-.adm-btn{padding:12px;border:none;border-radius:10px;font-size:14px;font-weight:700;
-  font-family:inherit;cursor:pointer;}
-.adm-btn-cancel{background:var(--bg);color:var(--muted);}
-.adm-btn-save{background:var(--accent);color:#fff;}
+.adm-input:focus{border-color:#3498db;}
+.adm-input::placeholder{letter-spacing:1px;color:#2a2a3a;font-size:0.8rem;}
+.adm-msg{font-size:0.72rem;font-weight:700;min-height:18px;
+  letter-spacing:1px;text-align:center;margin-bottom:8px;}
+.adm-msg.ok{color:#2ecc71;}
+.adm-msg.err{color:#e74c3c;}
+.adm-btns{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%;margin-top:4px;}
+.adm-btn{padding:13px;border:none;border-radius:10px;font-size:0.85rem;font-weight:900;
+  font-family:inherit;cursor:pointer;letter-spacing:.5px;}
 .adm-btn:active{opacity:.8;}
-.adm-msg{font-size:12px;text-align:center;min-height:16px;}
-.adm-msg.ok{color:var(--success);}
-.adm-msg.err{color:var(--danger);}
+.adm-btn-cancel{background:#18181f;border:1px solid #252530;color:#5a5a72;}
+.adm-btn-save{background:#3498db;color:#fff;}
 
 /* PC */
 @media(min-width:769px){
@@ -238,25 +225,33 @@ header h1{font-size:13px;font-weight:700;flex:1;}
 </head>
 <body>
 
-<!-- 비밀번호 오버레이 -->
+<!-- 비밀번호 잠금 화면 -->
 <div id="pwOverlay">
-  <div class="pw-box">
-    <img src="logo.png" alt="BR 디지털 명함" style="width:110px;height:auto;object-fit:contain;border-radius:12px;margin-bottom:4px;" onerror="this.style.display='none';document.getElementById('pwLogoFallback').style.display='block'">
-    <div id="pwLogoFallback" style="display:none;font-size:44px;line-height:1;margin-bottom:4px;">🪪</div>
+  <div class="pw-box" id="pwBox">
+    <img class="pw-lock-logo" src="logo.png" alt="BR 디지털 명함"
+      onerror="this.style.display='none';document.getElementById('pwLogoFallback').style.display='block'">
+    <div id="pwLogoFallback" style="display:none;font-size:56px;margin-bottom:14px;">🪪</div>
     <div class="pw-title">BR 디지털 명함</div>
-    <div class="pw-sub">계속하려면 비밀번호를 입력하세요</div>
-    <div class="pw-input-wrap">
-      <input class="pw-input" id="pwInput" type="password" maxlength="8"
-        placeholder="비밀번호 입력" autocomplete="off"
-        oninput="onPwInput()" onkeydown="if(event.key==='Enter')onPwConfirm()">
-      <button class="pw-eye" id="pwEye" onclick="togglePwEye()">👁</button>
-    </div>
-    <div class="pw-dots" id="pwDots">
+    <div class="pw-sub">비밀번호를 입력하세요</div>
+    <div class="pw-dots">
       <div class="pw-dot" id="pd0"></div><div class="pw-dot" id="pd1"></div>
       <div class="pw-dot" id="pd2"></div><div class="pw-dot" id="pd3"></div>
     </div>
-    <button class="pw-btn" onclick="onPwConfirm()">🔓 로그인</button>
     <div class="pw-err" id="pwErr"></div>
+    <div class="pw-keypad">
+      <button class="kbtn" onclick="lockKey('1')">1</button>
+      <button class="kbtn" onclick="lockKey('2')">2</button>
+      <button class="kbtn" onclick="lockKey('3')">3</button>
+      <button class="kbtn" onclick="lockKey('4')">4</button>
+      <button class="kbtn" onclick="lockKey('5')">5</button>
+      <button class="kbtn" onclick="lockKey('6')">6</button>
+      <button class="kbtn" onclick="lockKey('7')">7</button>
+      <button class="kbtn" onclick="lockKey('8')">8</button>
+      <button class="kbtn" onclick="lockKey('9')">9</button>
+      <div class="kbtn empty"></div>
+      <button class="kbtn" onclick="lockKey('0')">0</button>
+      <button class="kbtn del" onclick="lockDel()">⌫</button>
+    </div>
   </div>
   <!-- 로딩 박스 (로그인 후 표시) -->
   <div id="pwLoadingBox">
@@ -264,31 +259,33 @@ header h1{font-size:13px;font-weight:700;flex:1;}
     <div class="pw-loading-msg" id="pwLoadingMsg">프로그램 로딩중...</div>
     <div class="pw-loading-sub" id="pwLoadingSub">서식 및 폰트를 불러오는 중입니다</div>
   </div>
-  <div style="position:absolute;bottom:14px;right:18px;color:rgba(255,255,255,.35);font-size:10px;letter-spacing:.3px;">Made by 보령시 전산팀</div>
+  <div style="position:absolute;bottom:14px;right:18px;color:#2a2a3a;font-size:10px;letter-spacing:.5px;font-weight:700;">Made by 보령시 전산팀</div>
 </div>
 
-<!-- 관리자 비밀번호 변경 모달 -->
+<!-- 관리자 비밀번호 변경 (붙임 스타일 전체화면) -->
 <div id="adminPwModal" class="hidden">
   <div class="adm-box">
     <div class="adm-title">⚙️ 비밀번호 설정</div>
+    <div class="adm-sub">관리자 전용 메뉴</div>
     <div class="adm-row">
       <span class="adm-lbl">일반 사용자 비밀번호</span>
-      <input class="adm-input" id="admUserPw" type="password" placeholder="새 비밀번호 입력" maxlength="8">
+      <input class="adm-input" id="admUserPw" type="password" placeholder="새 비밀번호" maxlength="8">
     </div>
     <div class="adm-row">
       <span class="adm-lbl">관리자 비밀번호</span>
-      <input class="adm-input" id="admAdminPw" type="password" placeholder="새 관리자 비밀번호 입력" maxlength="8">
+      <input class="adm-input" id="admAdminPw" type="password" placeholder="새 관리자 비밀번호" maxlength="8">
     </div>
     <div class="adm-row">
-      <span class="adm-lbl">새 관리자 비밀번호 확인</span>
-      <input class="adm-input" id="admAdminPwConfirm" type="password" placeholder="관리자 비밀번호 재입력" maxlength="8">
+      <span class="adm-lbl">관리자 비밀번호 확인</span>
+      <input class="adm-input" id="admAdminPwConfirm" type="password" placeholder="재입력" maxlength="8">
     </div>
     <div class="adm-msg" id="admMsg"></div>
     <div class="adm-btns">
       <button class="adm-btn adm-btn-cancel" onclick="closeAdminModal()">취소</button>
-      <button class="adm-btn adm-btn-save" onclick="saveAdminPw()">💾 저장</button>
+      <button class="adm-btn adm-btn-save" onclick="saveAdminPw()">저장</button>
     </div>
   </div>
+  <div style="position:absolute;bottom:14px;right:18px;color:#2a2a3a;font-size:10px;letter-spacing:.5px;font-weight:700;">Made by 보령시 전산팀</div>
 </div>
 
 <div class="loading-bar" id="loadingBar"></div>
@@ -507,45 +504,79 @@ header h1{font-size:13px;font-weight:700;flex:1;}
     }
   }
 
-  window.onPwInput = function(){
-    var val = document.getElementById('pwInput').value;
+  var _lockBuf = '';
+
+  function updateDots(){
     for(var i=0;i<4;i++){
       var d=document.getElementById('pd'+i);
-      if(d) d.classList.toggle('filled', i < val.length);
+      if(!d) continue;
+      d.classList.remove('filled','error');
+      if(i < _lockBuf.length) d.classList.add('filled');
     }
+  }
+
+  function shakeError(){
+    var kp=document.querySelector('.pw-keypad');
+    var dots=document.querySelector('.pw-dots');
+    [kp,dots].forEach(function(el){
+      if(!el) return;
+      el.style.animation='none';
+      requestAnimationFrame(function(){ el.style.animation='shake .35s ease'; });
+    });
+    for(var i=0;i<4;i++){
+      var d=document.getElementById('pd'+i);
+      if(d){d.classList.remove('filled');d.classList.add('error');}
+    }
+    setTimeout(function(){
+      for(var i=0;i<4;i++){
+        var d=document.getElementById('pd'+i);
+        if(d) d.classList.remove('error');
+      }
+    }, 600);
+  }
+
+  window.lockKey = function(n){
+    if(_lockBuf.length >= 4) return;
+    _lockBuf += n;
+    updateDots();
     var err=document.getElementById('pwErr');
     if(err) err.textContent='';
+    if(_lockBuf.length === 4){
+      setTimeout(function(){ checkPw(); }, 120);
+    }
   };
 
-  window.togglePwEye = function(){
-    var inp=document.getElementById('pwInput');
-    var isText = inp.type==='text';
-    inp.type = isText ? 'password' : 'text';
-    document.getElementById('pwEye').textContent = isText ? '👁' : '🙈';
+  window.lockDel = function(){
+    if(!_lockBuf.length) return;
+    _lockBuf = _lockBuf.slice(0,-1);
+    updateDots();
   };
 
-  window.onPwConfirm = function(){
-    var val = document.getElementById('pwInput').value;
+  function checkPw(){
+    var val = _lockBuf;
     var userPw  = getPw(PW_KEY_USER,  DEFAULT_USER_PW);
     var adminPw = getPw(PW_KEY_ADMIN, DEFAULT_ADMIN_PW);
-
     if(val === adminPw){
       unlockSite(true);
     } else if(val === userPw){
       unlockSite(false);
     } else {
       var err=document.getElementById('pwErr');
-      err.textContent='❌ 비밀번호가 올바르지 않습니다';
-      document.getElementById('pwInput').value='';
-      window.onPwInput();
-      err.style.animation='none';
-      requestAnimationFrame(function(){ err.style.animation='shake .3s ease'; });
+      if(err) err.textContent='비밀번호가 틀렸습니다';
+      shakeError();
+      _lockBuf='';
+      setTimeout(function(){ updateDots(); },600);
     }
-  };
+  }
+
+  // 구형 호환 (사용 안 하지만 참조 오류 방지)
+  window.onPwInput = function(){};
+  window.togglePwEye = function(){};
+  window.onPwConfirm = function(){ checkPw(); };
 
   function unlockSite(isAdmin){
     // pw-box 숨기고 로딩 박스 표시
-    var box=document.querySelector('.pw-box');
+    var box=document.getElementById('pwBox');
     var lb=document.getElementById('pwLoadingBox');
     if(box) box.style.display='none';
     if(lb)  lb.classList.add('show');
@@ -602,11 +633,7 @@ header h1{font-size:13px;font-weight:700;flex:1;}
   };
 
   // 페이지 로드 후 입력창 포커스
-  window.addEventListener('load', function(){
-    setTimeout(function(){
-      var p=document.getElementById('pwInput'); if(p) p.focus();
-    }, 100);
-  });
+  // 키패드 방식 — 포커스 불필요
 })();
 </script>
 
