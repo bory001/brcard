@@ -229,10 +229,12 @@ header h1{font-size:13px;font-weight:700;flex:1;}
 <div id="pwOverlay">
   <div class="pw-box" id="pwBox">
     <img class="pw-lock-logo" src="logo.png" alt="BR 디지털 명함"
+      onclick="triggerInstall()"
+      style="cursor:pointer;"
       onerror="this.style.display='none';document.getElementById('pwLogoFallback').style.display='block'">
-    <div id="pwLogoFallback" style="display:none;font-size:56px;margin-bottom:14px;">🪪</div>
+    <div id="pwLogoFallback" style="display:none;font-size:56px;margin-bottom:14px;cursor:pointer;" onclick="triggerInstall()">🪪</div>
     <div class="pw-title">BR 디지털 명함</div>
-    <div class="pw-sub">비밀번호를 입력하세요</div>
+    <div class="pw-sub" id="pwSubMsg">비밀번호를 입력하세요</div>
     <div class="pw-dots">
       <div class="pw-dot" id="pd0"></div><div class="pw-dot" id="pd1"></div>
       <div class="pw-dot" id="pd2"></div><div class="pw-dot" id="pd3"></div>
@@ -2209,8 +2211,9 @@ function bufToBase64(buf){
   return btoa(bin);
 }
 </script>
-<!-- PWA Service Worker 등록 -->
+<!-- PWA Service Worker 등록 + 설치 프롬프트 -->
 <script>
+// ── Service Worker 등록 ──
 if('serviceWorker' in navigator){
   window.addEventListener('load',()=>{
     navigator.serviceWorker.register('./sw.js')
@@ -2218,6 +2221,60 @@ if('serviceWorker' in navigator){
       .catch(err=>console.warn('SW error:',err));
   });
 }
+
+// ── PWA 설치 프롬프트 캡처 ──
+let _installPrompt = null;
+let _isInstalled = false;
+
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();           // 자동 팝업 억제
+  _installPrompt = e;           // 나중에 쓸 수 있게 보관
+  // 로고 아래 힌트 표시
+  const sub = document.getElementById('pwSubMsg');
+  if(sub) sub.textContent = '🔽 로고를 누르면 앱 설치';
+});
+
+// 이미 설치된 경우
+window.addEventListener('appinstalled', () => {
+  _isInstalled = true;
+  _installPrompt = null;
+  const sub = document.getElementById('pwSubMsg');
+  if(sub) sub.textContent = '비밀번호를 입력하세요';
+});
+
+// ── 로고 클릭 → 설치 프롬프트 실행 ──
+window.triggerInstall = async function(){
+  if(_isInstalled){
+    // 이미 설치됨
+    const sub = document.getElementById('pwSubMsg');
+    if(sub){
+      sub.textContent = '✅ 이미 설치된 앱입니다';
+      setTimeout(()=>{ sub.textContent='비밀번호를 입력하세요'; }, 2000);
+    }
+    return;
+  }
+  if(!_installPrompt){
+    // 프롬프트 없음 (이미 설치됐거나 브라우저 미지원)
+    const sub = document.getElementById('pwSubMsg');
+    if(sub){
+      const ua = navigator.userAgent;
+      const isIOS = /iPhone|iPad|iPod/.test(ua);
+      if(isIOS){
+        sub.textContent = '📲 Safari 공유 → 홈 화면에 추가';
+      } else {
+        sub.textContent = '브라우저 메뉴에서 설치하세요';
+      }
+      setTimeout(()=>{ sub.textContent='비밀번호를 입력하세요'; }, 3000);
+    }
+    return;
+  }
+  // 프롬프트 실행
+  _installPrompt.prompt();
+  const result = await _installPrompt.userChoice;
+  if(result.outcome === 'accepted'){
+    _installPrompt = null;
+  }
+};
 </script>
 </body>
 </html>
