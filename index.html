@@ -754,6 +754,25 @@ async function getNode(path){
   return snap.exists() ? snap.val() : null;
 }
 
+// 폰트 메타만 REST로 가져오기 (base64 제외 → 트래픽 절감)
+async function getFontMeta(key){
+  try{
+    const res=await fetch(`https://reservation-928c2-default-rtdb.asia-southeast1.firebasedatabase.app/card_fonts/${key}.json?shallow=true`);
+    const data=await res.json();
+    // shallow=true 시 값이 있으면 true, 없으면 null
+    // 실제 name/createdAt을 가져오려면 필드별 쿼리 필요
+    // Firebase REST는 특정 필드 선택 불가 → name, createdAt만 별도 요청
+    const [nameRes, tsRes] = await Promise.all([
+      fetch(`https://reservation-928c2-default-rtdb.asia-southeast1.firebasedatabase.app/card_fonts/${key}/name.json`),
+      fetch(`https://reservation-928c2-default-rtdb.asia-southeast1.firebasedatabase.app/card_fonts/${key}/createdAt.json`)
+    ]);
+    const name = await nameRes.json();
+    const createdAt = await tsRes.json();
+    if(!name) return null;
+    return {name, createdAt: createdAt||0};
+  }catch(e){ return null; }
+}
+
 async function loadFromServer(){
   document.getElementById('syncDot').className='sync-dot';
   try{
@@ -777,12 +796,12 @@ async function loadFromServer(){
     }
     renderImages();
 
-    // 폰트
+    // 폰트 — 메타(name,createdAt)만 먼저 가져와 캐시 판단 후 base64는 필요한 것만 다운로드
     serverFonts=[];
     const fontKeys=await getChildKeys('card_fonts');
     for(const key of fontKeys){
-      const val=await getNode(`card_fonts/${key}`);
-      if(val) serverFonts.push({fbKey:key,...val});
+      const meta=await getFontMeta(key); // name,createdAt만 가져옴
+      if(meta) serverFonts.push({fbKey:key,...meta});
     }
     await loadFontsFromServer();
     renderFontSelect();
@@ -897,15 +916,22 @@ async function loadFontsFromServer(){
     const f=serverFonts[i];
     updateLoadingMsg(`폰트 로딩중... (${i+1}/${serverFonts.length})`);
 
-    // 캐시 확인: name + createdAt 동일하면 캐시 사용 (DB 다운로드 생략)
+    // 캐시 확인: createdAt 동일하면 캐시 사용 → base64 DB 요청 완전 생략
     const cache = getFontCache(f.name);
-    if(cache && cache.createdAt === f.createdAt && cache.base64){
+    const cacheHit = cache && String(cache.createdAt) === String(f.createdAt) && cache.base64;
+    if(cacheHit){
       updateLoadingMsg(`폰트 로딩중... (${i+1}/${serverFonts.length}) ⚡캐시`);
       await registerFont(f.name, cache.base64);
     } else {
       updateLoadingMsg(`폰트 로딩중... (${i+1}/${serverFonts.length}) ⬇다운로드`);
-      await registerFont(f.name, f.base64);
-      setFontCache(f.name, f.base64, f.createdAt);
+      // 캐시 미스일 때만 base64 포함 전체 노드 가져오기
+      const full = await getNode(`card_fonts/${f.fbKey}`);
+      const base64 = full ? full.base64 : null;
+      if(base64){
+        await registerFont(f.name, base64);
+        setFontCache(f.name, base64, f.createdAt);
+        f.base64 = base64; // serverFonts 업데이트
+      }
     }
   }
   await document.fonts.ready;
