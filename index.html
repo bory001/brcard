@@ -262,7 +262,10 @@ header h1{font-size:13px;font-weight:700;flex:1;}
     <div class="pw-loading-msg" id="pwLoadingMsg">프로그램 로딩중...</div>
     <div class="pw-loading-sub" id="pwLoadingSub">서식 및 폰트를 불러오는 중입니다</div>
   </div>
-  <div style="position:absolute;bottom:14px;right:18px;color:#2a2a3a;font-size:10px;letter-spacing:.5px;font-weight:700;">Made by 보령시 전산팀</div>
+  <div style="position:absolute;bottom:12px;left:0;right:0;display:flex;align-items:center;justify-content:space-between;padding:0 16px;">
+    <button onclick="hardRefresh()" style="background:none;border:none;color:#2a2a3a;font-size:10px;font-weight:700;letter-spacing:.5px;cursor:pointer;font-family:inherit;padding:4px 6px;border-radius:6px;transition:color .2s;" onmouseenter="this.style.color='#3498db'" onmouseleave="this.style.color='#2a2a3a'" ontouchstart="this.style.color='#3498db'" ontouchend="this.style.color='#2a2a3a'">🔄 캐시 새로고침</button>
+    <div style="color:#2a2a3a;font-size:10px;letter-spacing:.5px;font-weight:700;">Made by 보령시 전산팀</div>
+  </div>
 </div>
 
 <!-- 관리자 비밀번호 변경 (붙임 스타일 전체화면) -->
@@ -2242,6 +2245,33 @@ window.addEventListener('appinstalled', () => {
   const sub = document.getElementById('pwSubMsg');
   if(sub) sub.textContent = '비밀번호를 입력하세요';
 });
+
+// ── 캐시 새로고침 (SW 캐시 + IndexedDB 폰트캐시 삭제 후 리로드) ──
+window.hardRefresh = async function(){
+  const btn = event && event.target;
+  if(btn){ btn.textContent='🔄 초기화중...'; btn.style.color='#3498db'; }
+
+  try{
+    // 1) Service Worker 캐시 전체 삭제
+    if('caches' in window){
+      const keys = await caches.keys();
+      await Promise.all(keys.map(k => caches.delete(k)));
+    }
+    // 2) Service Worker 등록 해제
+    if('serviceWorker' in navigator){
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(r => r.unregister()));
+    }
+    // 3) IndexedDB 폰트 캐시 삭제
+    await new Promise(res => {
+      const req = indexedDB.deleteDatabase('br_font_cache');
+      req.onsuccess = req.onerror = res;
+    });
+  } catch(e){ console.warn('캐시 삭제 오류:', e); }
+
+  // 4) 강제 새로고침
+  location.reload(true);
+};
 
 // ── 로고 클릭 → 설치 프롬프트 실행 ──
 window.triggerInstall = async function(){
