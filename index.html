@@ -485,15 +485,47 @@ header h1{font-size:13px;font-weight:700;flex:1;}
 <!-- ══ 비밀번호 시스템 (일반 스크립트 — module 스코프 밖) ══ -->
 <script>
 (function(){
-  var PW_KEY_USER  = 'br_pw_user';
-  var PW_KEY_ADMIN = 'br_pw_admin';
+  var DB_URL  = 'https://reservation-928c2-default-rtdb.asia-southeast1.firebasedatabase.app';
+  var PW_PATH = 'app_config/passwords.json';
   var DEFAULT_USER_PW  = '1234';
   var DEFAULT_ADMIN_PW = '1020';
 
-  function getPw(key, def){ return localStorage.getItem(key) || def; }
+  // 메모리 캐시 (Firebase에서 불러온 값)
+  var _cachedUserPw  = null;
+  var _cachedAdminPw = null;
+  var _pwLoaded = false;
+  var _pwLoadCallbacks = [];
+
+  // ── Firebase REST API로 비밀번호 로드 ──
+  function loadPwFromDB(callback){
+    if(_pwLoaded){ callback(); return; }
+    _pwLoadCallbacks.push(callback);
+    if(_pwLoadCallbacks.length > 1) return; // 이미 요청 중
+    fetch(DB_URL + '/' + PW_PATH)
+      .then(function(r){ return r.json(); })
+      .then(function(data){
+        if(data){
+          _cachedUserPw  = data.user  || DEFAULT_USER_PW;
+          _cachedAdminPw = data.admin || DEFAULT_ADMIN_PW;
+        } else {
+          _cachedUserPw  = DEFAULT_USER_PW;
+          _cachedAdminPw = DEFAULT_ADMIN_PW;
+        }
+        _pwLoaded = true;
+        _pwLoadCallbacks.forEach(function(cb){ cb(); });
+        _pwLoadCallbacks = [];
+      })
+      .catch(function(){
+        // 네트워크 오류 시 기본값 사용
+        _cachedUserPw  = DEFAULT_USER_PW;
+        _cachedAdminPw = DEFAULT_ADMIN_PW;
+        _pwLoaded = true;
+        _pwLoadCallbacks.forEach(function(cb){ cb(); });
+        _pwLoadCallbacks = [];
+      });
+  }
 
   function showToastSafe(msg, type){
-    // module 스크립트의 showToast가 준비됐으면 사용, 아니면 직접 처리
     if(typeof window._showToast === 'function') window._showToast(msg, type);
     else {
       var t=document.getElementById('toast');
@@ -554,22 +586,22 @@ header h1{font-size:13px;font-weight:700;flex:1;}
 
   function checkPw(){
     var val = _lockBuf;
-    var userPw  = getPw(PW_KEY_USER,  DEFAULT_USER_PW);
-    var adminPw = getPw(PW_KEY_ADMIN, DEFAULT_ADMIN_PW);
-    if(val === adminPw){
-      unlockSite(true);
-    } else if(val === userPw){
-      unlockSite(false);
-    } else {
-      var err=document.getElementById('pwErr');
-      if(err) err.textContent='비밀번호가 틀렸습니다';
-      shakeError();
-      _lockBuf='';
-      setTimeout(function(){ updateDots(); },600);
-    }
+    // DB에서 비번 불러온 후 확인
+    loadPwFromDB(function(){
+      if(val === _cachedAdminPw){
+        unlockSite(true);
+      } else if(val === _cachedUserPw){
+        unlockSite(false);
+      } else {
+        var err=document.getElementById('pwErr');
+        if(err) err.textContent='비밀번호가 틀렸습니다';
+        shakeError();
+        _lockBuf='';
+        setTimeout(function(){ updateDots(); },600);
+      }
+    });
   }
 
-  // 구형 호환 (사용 안 하지만 참조 오류 방지)
   window.onPwInput = function(){};
   window.togglePwEye = function(){};
   window.onPwConfirm = function(){ checkPw(); };
@@ -577,16 +609,13 @@ header h1{font-size:13px;font-weight:700;flex:1;}
   function unlockSite(isAdmin){
     var btn=document.getElementById('adminBtn');
     if(isAdmin){
-      // 관리자: 로딩 없이 바로 오버레이 닫고 비번설정 모달 즉시 오픈
       if(btn) btn.style.display='';
       var overlay=document.getElementById('pwOverlay');
       if(overlay) overlay.classList.add('hidden');
       window.openAdminModal && window.openAdminModal();
-      // 백그라운드에서 서버 데이터 로드
       window._pendingAdmin = false;
       waitAndLoad();
     } else {
-      // 일반 사용자: 로딩 스피너 표시 후 데이터 로드
       var box=document.getElementById('pwBox');
       var lb=document.getElementById('pwLoadingBox');
       if(box) box.style.display='none';
@@ -632,15 +661,33 @@ header h1{font-size:13px;font-weight:700;flex:1;}
     if(adminPw && adminPw === userPw){
       msg.textContent='관리자 비밀번호는 사용자 비밀번호와 달라야 합니다.'; msg.className='adm-msg err'; return;
     }
-    if(userPw)  localStorage.setItem(PW_KEY_USER,  userPw);
-    if(adminPw) localStorage.setItem(PW_KEY_ADMIN, adminPw);
-    msg.textContent='✅ 저장되었습니다!'; msg.className='adm-msg ok';
-    showToastSafe('비밀번호 저장 완료','ok');
-    setTimeout(function(){ window.closeAdminModal(); }, 1200);
+
+    // module 스크립트의 Firebase SDK로 저장 (브릿지 호출)
+    var newUser  = userPw  || _cachedUserPw  || DEFAULT_USER_PW;
+    var newAdmin = adminPw || _cachedAdminPw || DEFAULT_ADMIN_PW;
+
+    if(typeof window._savePwToDb === 'function'){
+      window._savePwToDb(newUser, newAdmin, function(ok){
+        if(ok){
+          // 메모리 캐시 즉시 갱신
+          _cachedUserPw  = newUser;
+          _cachedAdminPw = newAdmin;
+          msg.textContent='✅ 저장되었습니다!'; msg.className='adm-msg ok';
+          showToastSafe('비밀번호 저장 완료 (전체 동기화)','ok');
+          setTimeout(function(){ window.closeAdminModal(); }, 1200);
+        } else {
+          msg.textContent='저장 실패 — 서버 연결을 확인하세요.'; msg.className='adm-msg err';
+        }
+      });
+    } else {
+      msg.textContent='저장 모듈 준비중... 잠시 후 다시 시도하세요.'; msg.className='adm-msg err';
+    }
   };
 
-  // 페이지 로드 후 입력창 포커스
-  // 키패드 방식 — 포커스 불필요
+  // 페이지 로드 시 비밀번호 미리 로드 (로그인 속도 향상)
+  window.addEventListener('load', function(){
+    loadPwFromDB(function(){});
+  });
 })();
 </script>
 
@@ -883,6 +930,17 @@ async function registerFont(name, base64){
 window._loadFromServer = loadFromServer;
 window.updateLoadingMsg = updateLoadingMsg;
 window.finishLoading = finishLoading;
+
+// 비밀번호 Firebase 저장 브릿지 (plain script에서 호출)
+window._savePwToDb = async function(userPw, adminPw, callback){
+  try{
+    await set(ref(db,'app_config/passwords'),{user:userPw, admin:adminPw});
+    callback(true);
+  }catch(e){
+    console.error('비밀번호 저장 실패:',e);
+    callback(false);
+  }
+};
 window.onload=async()=>{
   // 비밀번호 입력창 포커스
   setTimeout(()=>{ const p=document.getElementById('pwInput'); if(p) p.focus(); },100);
