@@ -1124,6 +1124,8 @@ window.switchTab=i=>{
     const tb=document.getElementById('tab'+j);
     if(tb)tb.classList.toggle('active',j===i);
   });
+  // 편집 탭 전환 시 선택 객체 내용 편집 패널에 반영
+  if(i===1) updateSelectionPanel();
 };
 
 // ══════════════════════ 도구 / 방향 / 배경 ══════════════════════
@@ -1715,7 +1717,11 @@ function updateHdrDelBtn(){
 
 // ── 미세조정 화살표 패드 ──
 let _nudgeTimer=null;
-let _padDragging=false,_padDragX=0,_padDragY=0,_padLeft=0,_padTop=0;
+let _padDragging=false,_padDragX=0,_padDragY=0;
+// 마지막 패드 위치를 localStorage에서 복원
+let _padSaved=JSON.parse(localStorage.getItem('br_nudge_pos')||'null');
+let _padLeft=_padSaved?_padSaved.left:null;
+let _padTop=_padSaved?_padSaved.top:null;
 let _padPositioned=false;
 
 function updateNudgePad(){
@@ -1726,20 +1732,25 @@ function updateNudgePad(){
     return;
   }
   p.classList.add('show');
-  // 최초 표시 시만 초기 위치 설정
+  // 위치 설정: 저장된 위치 우선, 없으면 캔버스 우측 하단 기본값
   if(!_padPositioned){
     _padPositioned=true;
-    const cv=document.getElementById('cardCanvas');
-    const wrap=document.getElementById('canvasWrap');
-    if(cv&&wrap){
-      const cRect=cv.getBoundingClientRect();
-      const wRect=wrap.getBoundingClientRect();
-      // 캔버스 우측 하단 안쪽
-      _padLeft=(cRect.right-wRect.left)-130;
-      _padTop=(cRect.bottom-wRect.top)-130;
+    if(_padLeft!==null && _padTop!==null){
       p.style.left=_padLeft+'px';
       p.style.top=_padTop+'px';
       p.style.right='';p.style.bottom='';
+    } else {
+      const cv=document.getElementById('cardCanvas');
+      const wrap=document.getElementById('canvasWrap');
+      if(cv&&wrap){
+        const cRect=cv.getBoundingClientRect();
+        const wRect=wrap.getBoundingClientRect();
+        _padLeft=(cRect.right-wRect.left)-130;
+        _padTop=(cRect.bottom-wRect.top)-130;
+        p.style.left=_padLeft+'px';
+        p.style.top=_padTop+'px';
+        p.style.right='';p.style.bottom='';
+      }
     }
   }
 }
@@ -1785,7 +1796,14 @@ function setupNudgePadDrag(){
     p.style.left=(_padLeft+dx)+'px';
     p.style.top=(_padTop+dy)+'px';
   },{passive:true});
-  p.addEventListener('pointerup',()=>{ _padDragging=false; });
+  p.addEventListener('pointerup',e=>{
+    if(_padDragging){
+      const dx=e.clientX-_padDragX, dy=e.clientY-_padDragY;
+      _padLeft=_padLeft+dx; _padTop=_padTop+dy;
+      localStorage.setItem('br_nudge_pos',JSON.stringify({left:_padLeft,top:_padTop}));
+    }
+    _padDragging=false;
+  });
   p.addEventListener('pointercancel',()=>{ _padDragging=false; });
 }
 
