@@ -1095,6 +1095,7 @@ window.onload=async()=>{
   renderSavedList();
   setupEditPanelEvents();
   setupQuickBar();
+  setupNudgePadDrag();
   draw();
   setupDrop();
   // ※ loadFromServer()는 로그인 성공(unlockSite) 후 호출됩니다
@@ -1423,6 +1424,7 @@ function onDown(e){
     drag.multiOrigPositions=state.selectedList.map(o=>({obj:o,x:o.x,y:o.y}));
   }else{
     state.selected=null;state.selectedList=[];
+    _padPositioned=false;
     drag.active=false;
   }
   draw();updateSelectionPanel();
@@ -1712,83 +1714,80 @@ function updateHdrDelBtn(){
 }
 
 // ── 미세조정 화살표 패드 ──
-(()=>{
-  const pad=()=>document.getElementById('nudgePad');
-  let _nudgeTimer=null, _nudgeDir=null;
-  // 패드 드래그 이동
-  let _padDrag=false,_padX=0,_padY=0,_padLeft=0,_padTop=0;
+let _nudgeTimer=null;
+let _padDragging=false,_padDragX=0,_padDragY=0,_padLeft=0,_padTop=0;
+let _padPositioned=false;
 
-  function updateNudgePad(){
-    const p=pad(); if(!p) return;
-    if(!state.selected){ p.classList.remove('show'); return; }
-    p.classList.add('show');
-    positionPad();
+function updateNudgePad(){
+  const p=document.getElementById('nudgePad');
+  if(!p) return;
+  if(!state.selected){
+    p.classList.remove('show');
+    return;
   }
-  window.updateNudgePad=updateNudgePad;
-
-  function positionPad(){
-    const p=pad(); if(!p) return;
-    const wrap=document.getElementById('canvasWrap');
+  p.classList.add('show');
+  // 최초 표시 시만 초기 위치 설정
+  if(!_padPositioned){
+    _padPositioned=true;
     const cv=document.getElementById('cardCanvas');
-    if(!wrap||!cv) return;
-    const wRect=wrap.getBoundingClientRect();
-    const cRect=cv.getBoundingClientRect();
-    // 캔버스 우측 하단 기준 — wrap 내 상대 좌표
-    const right = wRect.right - cRect.right + 10;
-    const bottom = wRect.bottom - cRect.bottom + 10;
-    p.style.right = right+'px';
-    p.style.bottom = bottom+'px';
-    p.style.left = '';
-    p.style.top = '';
+    const wrap=document.getElementById('canvasWrap');
+    if(cv&&wrap){
+      const cRect=cv.getBoundingClientRect();
+      const wRect=wrap.getBoundingClientRect();
+      // 캔버스 우측 하단 안쪽
+      _padLeft=(cRect.right-wRect.left)-130;
+      _padTop=(cRect.bottom-wRect.top)-130;
+      p.style.left=_padLeft+'px';
+      p.style.top=_padTop+'px';
+      p.style.right='';p.style.bottom='';
+    }
   }
+}
 
-  function doNudge(dir){
-    const step=1;
-    const targets=state.selectedList.length>1?state.selectedList:[state.selected].filter(Boolean);
-    targets.forEach(o=>{
-      if(dir==='up')   o.y-=step;
-      if(dir==='down') o.y+=step;
-      if(dir==='left') o.x-=step;
-      if(dir==='right')o.x+=step;
-    });
-    draw();updateSelectionPanel();
-  }
-
-  window.nudgeStart=function(e,dir){
-    // 패드 버튼 클릭은 드래그로 처리 안 함
-    e.stopPropagation();
-    _nudgeDir=dir;
-    doNudge(dir);
-    _nudgeTimer=setInterval(()=>doNudge(dir),80);
-  };
-  window.nudgeStop=function(){
-    if(_nudgeTimer){clearInterval(_nudgeTimer);_nudgeTimer=null;}
-    _nudgeDir=null;
-  };
-
-  // 패드 드래그 이동
-  document.addEventListener('DOMContentLoaded',()=>{
-    const p=pad(); if(!p) return;
-    p.addEventListener('pointerdown',e=>{
-      if(e.target.classList.contains('np-btn')) return; // 버튼 클릭은 제외
-      _padDrag=true;
-      p.setPointerCapture(e.pointerId);
-      _padX=e.clientX; _padY=e.clientY;
-      const r=p.getBoundingClientRect();
-      const wr=document.getElementById('canvasWrap').getBoundingClientRect();
-      _padLeft=r.left-wr.left; _padTop=r.top-wr.top;
-      p.style.right=''; p.style.bottom='';
-      p.style.left=_padLeft+'px'; p.style.top=_padTop+'px';
-    });
-    p.addEventListener('pointermove',e=>{
-      if(!_padDrag) return;
-      const dx=e.clientX-_padX, dy=e.clientY-_padY;
-      p.style.left=(_padLeft+dx)+'px';
-      p.style.top=(_padTop+dy)+'px';
-    });
-    p.addEventListener('pointerup',()=>{ _padDrag=false; });
+function doNudge(dir){
+  const targets=state.selectedList.length>0?state.selectedList:[state.selected].filter(Boolean);
+  targets.forEach(o=>{
+    if(dir==='up')    o.y-=1;
+    if(dir==='down')  o.y+=1;
+    if(dir==='left')  o.x-=1;
+    if(dir==='right') o.x+=1;
   });
-})();
+  draw();updateSelectionPanel();
+}
+
+window.nudgeStart=function(e,dir){
+  e.stopPropagation();e.preventDefault();
+  doNudge(dir);
+  _nudgeTimer=setInterval(()=>doNudge(dir),80);
+};
+window.nudgeStop=function(){
+  clearInterval(_nudgeTimer);_nudgeTimer=null;
+};
+
+// 패드 드래그 이동 — window.onload 후 등록
+function setupNudgePadDrag(){
+  const p=document.getElementById('nudgePad');
+  if(!p) return;
+  p.addEventListener('pointerdown',e=>{
+    if(e.target.classList.contains('np-btn')) return;
+    _padDragging=true;
+    p.setPointerCapture(e.pointerId);
+    _padDragX=e.clientX; _padDragY=e.clientY;
+    const r=p.getBoundingClientRect();
+    const wr=document.getElementById('canvasWrap').getBoundingClientRect();
+    _padLeft=r.left-wr.left; _padTop=r.top-wr.top;
+    p.style.right='';p.style.bottom='';
+    p.style.left=_padLeft+'px';p.style.top=_padTop+'px';
+  },{passive:false});
+  p.addEventListener('pointermove',e=>{
+    if(!_padDragging)return;
+    const dx=e.clientX-_padDragX, dy=e.clientY-_padDragY;
+    p.style.left=(_padLeft+dx)+'px';
+    p.style.top=(_padTop+dy)+'px';
+  },{passive:true});
+  p.addEventListener('pointerup',()=>{ _padDragging=false; });
+  p.addEventListener('pointercancel',()=>{ _padDragging=false; });
+}
 
 // ══════════════════════ 저장/불러오기 ══════════════════════
 function makeDateStr(){
