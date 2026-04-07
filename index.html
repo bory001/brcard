@@ -1124,8 +1124,29 @@ window.switchTab=i=>{
     const tb=document.getElementById('tab'+j);
     if(tb)tb.classList.toggle('active',j===i);
   });
-  // 편집 탭 전환 시 선택 객체 내용 편집 패널에 반영
-  if(i===1) updateSelectionPanel();
+  // 편집 탭 전환 시 선택된 텍스트 객체 내용 편집 패널에 직접 반영
+  if(i===1 && state.selected && state.selected.type==='text'){
+    const o=state.selected;
+    const tcEl=document.getElementById('textContent');
+    if(tcEl) tcEl.value=o.text||'';
+    const ffSel=document.getElementById('fontFamily');
+    if(ffSel){
+      Array.from(ffSel.options).forEach(opt=>{ if(opt.value===o.font) ffSel.value=o.font; });
+    }
+    const fsSel=document.getElementById('fontSize');
+    if(fsSel&&o.size){
+      let closest=null,minDiff=999;
+      Array.from(fsSel.options).forEach(opt=>{
+        const d=Math.abs(parseInt(opt.value)-o.size);
+        if(d<minDiff){minDiff=d;closest=opt.value;}
+      });
+      fsSel.value=closest;
+    }
+    const tcol=document.getElementById('textColor');if(tcol)tcol.value=o.color||'#000000';
+    const bold=document.getElementById('textBold');if(bold)bold.checked=o.bold||false;
+    const italic=document.getElementById('textItalic');if(italic)italic.checked=o.italic||false;
+    const uline=document.getElementById('textUnderline');if(uline)uline.checked=o.underline||false;
+  }
 };
 
 // ══════════════════════ 도구 / 방향 / 배경 ══════════════════════
