@@ -59,6 +59,24 @@ header h1{font-size:13px;font-weight:700;flex:1;}
 .tb-color{width:30px;height:30px;border:1px solid var(--border);border-radius:7px;cursor:pointer;padding:2px;}
 .tb-lbl{font-size:10px;color:var(--muted);}
 #cardCanvas{display:block;box-shadow:0 4px 20px rgba(0,0,0,.5);touch-action:none;outline:none;}
+/* ── 미세조정 화살표 패드 ── */
+#nudgePad{
+  position:absolute;display:none;
+  background:rgba(0,0,0,.45);border-radius:14px;
+  padding:4px;user-select:none;touch-action:none;
+  z-index:50;backdrop-filter:blur(4px);
+  box-shadow:0 2px 12px rgba(0,0,0,.4);
+  cursor:grab;
+}
+#nudgePad.show{display:grid;}
+#nudgePad:active{cursor:grabbing;}
+#nudgePad{grid-template-columns:repeat(3,36px);grid-template-rows:repeat(3,36px);gap:2px;}
+.np-btn{width:36px;height:36px;border:none;border-radius:9px;
+  background:rgba(255,255,255,.18);color:#fff;font-size:16px;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  -webkit-tap-highlight-color:transparent;transition:background .1s;}
+.np-btn:active{background:rgba(255,255,255,.45);}
+.np-empty{width:36px;height:36px;}
 
 /* 섹션 */
 .sec{background:var(--surface);margin:10px;border-radius:12px;border:1px solid var(--border);overflow:hidden;}
@@ -313,7 +331,7 @@ header h1{font-size:13px;font-weight:700;flex:1;}
 
   <!-- 캔버스 탭 -->
   <div class="tab-panel active" id="panelCanvas">
-    <div class="canvas-wrap" id="canvasWrap">
+    <div class="canvas-wrap" id="canvasWrap" style="position:relative;">
       <div class="canvas-toolbar">
         <!-- 1행: 핵심 도구 -->
         <div class="tb-row">
@@ -358,6 +376,18 @@ header h1{font-size:13px;font-weight:700;flex:1;}
         </div>
       </div>
       <canvas id="cardCanvas" width="600" height="350" tabindex="0"></canvas>
+      <!-- 미세조정 화살표 패드 -->
+      <div id="nudgePad">
+        <div class="np-empty"></div>
+        <button class="np-btn" id="npUp"    onpointerdown="nudgeStart(event,'up')"   onpointerup="nudgeStop()" onpointerleave="nudgeStop()">▲</button>
+        <div class="np-empty"></div>
+        <button class="np-btn" id="npLeft"  onpointerdown="nudgeStart(event,'left')" onpointerup="nudgeStop()" onpointerleave="nudgeStop()">◀</button>
+        <div class="np-empty" style="background:rgba(255,255,255,.08);border-radius:9px;"></div>
+        <button class="np-btn" id="npRight" onpointerdown="nudgeStart(event,'right')"onpointerup="nudgeStop()" onpointerleave="nudgeStop()">▶</button>
+        <div class="np-empty"></div>
+        <button class="np-btn" id="npDown"  onpointerdown="nudgeStart(event,'down')" onpointerup="nudgeStop()" onpointerleave="nudgeStop()">▼</button>
+        <div class="np-empty"></div>
+      </div>
     </div>
   </div>
 
@@ -1678,7 +1708,87 @@ function updateHdrDelBtn(){
   const btn=document.getElementById('tbDelBtn');
   const hasSelection=state.selected||state.selectedList.length>0;
   if(btn) btn.style.display=hasSelection?'':'none';
+  updateNudgePad();
 }
+
+// ── 미세조정 화살표 패드 ──
+(()=>{
+  const pad=()=>document.getElementById('nudgePad');
+  let _nudgeTimer=null, _nudgeDir=null;
+  // 패드 드래그 이동
+  let _padDrag=false,_padX=0,_padY=0,_padLeft=0,_padTop=0;
+
+  function updateNudgePad(){
+    const p=pad(); if(!p) return;
+    if(!state.selected){ p.classList.remove('show'); return; }
+    p.classList.add('show');
+    positionPad();
+  }
+  window.updateNudgePad=updateNudgePad;
+
+  function positionPad(){
+    const p=pad(); if(!p) return;
+    const wrap=document.getElementById('canvasWrap');
+    const cv=document.getElementById('cardCanvas');
+    if(!wrap||!cv) return;
+    const wRect=wrap.getBoundingClientRect();
+    const cRect=cv.getBoundingClientRect();
+    // 캔버스 우측 하단 기준 — wrap 내 상대 좌표
+    const right = wRect.right - cRect.right + 10;
+    const bottom = wRect.bottom - cRect.bottom + 10;
+    p.style.right = right+'px';
+    p.style.bottom = bottom+'px';
+    p.style.left = '';
+    p.style.top = '';
+  }
+
+  function doNudge(dir){
+    const step=1;
+    const targets=state.selectedList.length>1?state.selectedList:[state.selected].filter(Boolean);
+    targets.forEach(o=>{
+      if(dir==='up')   o.y-=step;
+      if(dir==='down') o.y+=step;
+      if(dir==='left') o.x-=step;
+      if(dir==='right')o.x+=step;
+    });
+    draw();updateSelectionPanel();
+  }
+
+  window.nudgeStart=function(e,dir){
+    // 패드 버튼 클릭은 드래그로 처리 안 함
+    e.stopPropagation();
+    _nudgeDir=dir;
+    doNudge(dir);
+    _nudgeTimer=setInterval(()=>doNudge(dir),80);
+  };
+  window.nudgeStop=function(){
+    if(_nudgeTimer){clearInterval(_nudgeTimer);_nudgeTimer=null;}
+    _nudgeDir=null;
+  };
+
+  // 패드 드래그 이동
+  document.addEventListener('DOMContentLoaded',()=>{
+    const p=pad(); if(!p) return;
+    p.addEventListener('pointerdown',e=>{
+      if(e.target.classList.contains('np-btn')) return; // 버튼 클릭은 제외
+      _padDrag=true;
+      p.setPointerCapture(e.pointerId);
+      _padX=e.clientX; _padY=e.clientY;
+      const r=p.getBoundingClientRect();
+      const wr=document.getElementById('canvasWrap').getBoundingClientRect();
+      _padLeft=r.left-wr.left; _padTop=r.top-wr.top;
+      p.style.right=''; p.style.bottom='';
+      p.style.left=_padLeft+'px'; p.style.top=_padTop+'px';
+    });
+    p.addEventListener('pointermove',e=>{
+      if(!_padDrag) return;
+      const dx=e.clientX-_padX, dy=e.clientY-_padY;
+      p.style.left=(_padLeft+dx)+'px';
+      p.style.top=(_padTop+dy)+'px';
+    });
+    p.addEventListener('pointerup',()=>{ _padDrag=false; });
+  });
+})();
 
 // ══════════════════════ 저장/불러오기 ══════════════════════
 function makeDateStr(){
